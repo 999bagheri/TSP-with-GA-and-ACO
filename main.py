@@ -1,44 +1,37 @@
 import random
 import time
-# ---------------------- Step 1: Read input file ----------------------
-def read_input(filename):
-    with open(filename, 'r') as f:
-        lines = f.readlines()
-    n = int(lines[0].strip())
-    matrix = []
-    for line in lines[1:]:
-        row = list(map(int, line.strip().split()))
-        matrix.append([float('inf') if x == -1 else x for x in row])
-    return n, matrix
 
-# ---------------------- Utility Functions ----------------------
-def path_distance(path, matrix):
+
+def path_distance(path, matrix): #use the matrix and path array to calculate the distance
     dist = 0
     for i in range(len(path)):
         dist += matrix[path[i]][path[(i + 1) % len(path)]]
     return dist
 
+
 # ---------------------- Genetic Algorithm ----------------------
 def ga_tsp(matrix, num_generations=500, population_size=100, mutation_rate=0.1):
     num_cities = len(matrix)
 
+    #make a random path (chromosome)
     def create_individual():
         individual = list(range(num_cities))
         random.shuffle(individual)
         return individual
 
+    # we can't randomly change a value, cuz we don't want cities to repeat
     def mutate(individual):
         i, j = random.sample(range(num_cities), 2)
         individual[i], individual[j] = individual[j], individual[i]
 
     def crossover(parent1, parent2):
-        start, end = sorted(random.sample(range(num_cities), 2))
+        start, end = sorted(random.sample(range(num_cities), 2)) #select 2 points[-1] * num_cities
         child = [-1] * num_cities
         child[start:end] = parent1[start:end]
         ptr = 0
-        for city in parent2:
+        for city in parent2:   #iterate parent2 and add the new cities
             if city not in child:
-                while child[ptr] != -1:
+                while child[ptr] != -1:   #find the first empty slot
                     ptr += 1
                 child[ptr] = city
         return child
@@ -46,12 +39,12 @@ def ga_tsp(matrix, num_generations=500, population_size=100, mutation_rate=0.1):
     population = [create_individual() for _ in range(population_size)]
 
     for generation in range(num_generations):
-        population.sort(key=lambda x: path_distance(x, matrix))
+        population.sort(key=lambda x: path_distance(x, matrix)) #sort by dist
         next_generation = population[:10]  # Elitism
         while len(next_generation) < population_size:
             parent1, parent2 = random.choices(population[:50], k=2)
             child = crossover(parent1, parent2)
-            if random.random() < mutation_rate:
+            if random.random() < mutation_rate:   #random number from 0 to 1
                 mutate(child)
             next_generation.append(child)
         population = next_generation
@@ -62,7 +55,7 @@ def ga_tsp(matrix, num_generations=500, population_size=100, mutation_rate=0.1):
 # ---------------------- Ant Colony Optimization ----------------------
 def aco_tsp(matrix, num_ants=20, num_iterations=100, alpha=1, beta=5, evaporation=0.5, Q=100):
     num_cities = len(matrix)
-    pheromone = [[1 for _ in range(num_cities)] for _ in range(num_cities)]
+    pheromone = [[1 for _ in range(num_cities)] for _ in range(num_cities)] #10by10 pheromone matrix
 
     def select_next_city(visited, current):
         probs = []
@@ -111,9 +104,16 @@ def aco_tsp(matrix, num_ants=20, num_iterations=100, alpha=1, beta=5, evaporatio
 
     return best_path, best_dist
 
-# ---------------------- Main Execution ----------------------
+
 def main():
-    n, matrix = read_input('in.txt')
+    #read file
+    with open('in.txt', 'r') as f:
+        lines = f.readlines()
+    n = int(lines[0].strip())   #first line: number of cities
+    matrix = []
+    for line in lines[1:]:
+        row = list(map(int, line.strip().split())) #every number in the line/row
+        matrix.append([float('inf') if x == -1 else x for x in row]) #inf for when a path doesn't exist
 
     start_ga = time.time()
     ga_path, ga_dist = ga_tsp(matrix)
